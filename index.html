@@ -1296,6 +1296,99 @@
     50% { opacity: 0.4; transform: scale(0.7); }
   }
 
+  /* ====== SKELETON LOADING ====== */
+  .skeleton-card { display:flex; align-items:center; gap:12px; padding:10px 12px; }
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+  .skeleton-item {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 8px;
+  }
+  .skel-thumb  { width:48px; height:48px; border-radius:10px; flex-shrink:0; }
+  .skel-info   { flex:1; display:flex; flex-direction:column; gap:8px; }
+  .skel-title  { height:14px; width:62%; border-radius:4px; }
+  .skel-meta   { height:11px; width:38%; border-radius:4px; }
+
+  /* ====== ART VINYL ROTATION ====== */
+  @keyframes artSpin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+  .pm-art-wrap .pm-art,
+  .pm-art-wrap .pm-art-placeholder {
+    transition: border-radius 0.5s ease, box-shadow 0.4s ease;
+  }
+  /* Saat ada lagu: art berbentuk lingkaran, animasi siap (paused) */
+  .pm-art-wrap.has-song .pm-art,
+  .pm-art-wrap.has-song .pm-art-placeholder {
+    border-radius: 50% !important;
+    animation: artSpin 20s linear infinite;
+    animation-play-state: paused;
+  }
+  /* Saat playing: animasi berjalan */
+  .pm-art-wrap.has-song.is-playing .pm-art,
+  .pm-art-wrap.has-song.is-playing .pm-art-placeholder {
+    animation-play-state: running;
+    box-shadow: 0 0 0 5px rgba(126,232,162,0.18), 0 24px 64px rgba(0,0,0,0.6) !important;
+  }
+  /* Override saat lirik terbuka — art kembali kotak kecil */
+  .player-modal.lyrics-open .pm-art-wrap .pm-art,
+  .player-modal.lyrics-open .pm-art-wrap .pm-art-placeholder {
+    border-radius: 14px !important;
+    animation: none !important;
+    box-shadow: 0 24px 64px rgba(0,0,0,0.6) !important;
+  }
+
+  /* ====== SORT CHIPS ====== */
+  .sort-chips {
+    display: flex; gap: 6px;
+    padding: 6px 20px 8px;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .sort-chips::-webkit-scrollbar { display: none; }
+  .sort-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 50px; padding: 5px 12px;
+    font-size: 12px; color: var(--text2);
+    cursor: pointer; white-space: nowrap; flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .sort-chip:active { opacity: 0.75; }
+  .sort-chip.active {
+    background: rgba(126,232,162,0.12);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ====== KEYBOARD SHORTCUT TABLE (di Settings) ====== */
+  .shortcut-table { width:100%; border-collapse:collapse; }
+  .shortcut-table td { padding:8px 0; font-size:13px; }
+  .shortcut-table td:first-child { color:var(--text2); }
+  .shortcut-table td:last-child  { text-align:right; }
+  .shortcut-table tr { border-bottom:1px solid var(--border); }
+  .shortcut-table tr:last-child { border-bottom:none; }
+  .kbd {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 5px; padding: 2px 7px;
+    font-size: 11px; font-family: monospace;
+    color: var(--text); min-width: 24px;
+    margin-left: 4px;
+  }
+
+  /* ====== OFFLINE BANNER ====== */
+  .offline-banner {
+    position: fixed; top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 100%; max-width: 430px;
+    background: #c0392b; color: #fff;
+    text-align: center; padding: 8px 16px;
+    font-size: 13px; z-index: 9999;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+
 </style>
 </head>
 <body>
@@ -1355,6 +1448,10 @@
     <div class="section-header">
       <div class="section-title">Favorit Kamu</div>
     </div>
+    <div class="sort-chips">
+      <div class="sort-chip active" data-page="fav" data-sort="recent"><i class="fa-solid fa-clock" style="font-size:10px"></i> Terbaru</div>
+      <div class="sort-chip" data-page="fav" data-sort="alpha"><i class="fa-solid fa-arrow-down-a-z" style="font-size:10px"></i> A–Z</div>
+    </div>
     <div id="favoritesList" class="song-list"></div>
   </div>
 
@@ -1374,6 +1471,10 @@
     <div class="section-header">
       <div class="section-title">Riwayat Putar</div>
       <div class="section-action" id="clearHistoryBtn">Hapus Semua</div>
+    </div>
+    <div class="sort-chips">
+      <div class="sort-chip active" data-page="hist" data-sort="recent"><i class="fa-solid fa-clock" style="font-size:10px"></i> Terbaru</div>
+      <div class="sort-chip" data-page="hist" data-sort="alpha"><i class="fa-solid fa-arrow-down-a-z" style="font-size:10px"></i> A–Z</div>
     </div>
     <div id="historyList" class="song-list"></div>
   </div>
@@ -1594,6 +1695,19 @@
           <div class="toggle-knob"></div>
         </div>
       </div>
+      <!-- URL Backsound Kustom -->
+      <div style="padding:10px 0 4px">
+        <div style="font-size:11px;color:var(--text3);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:1px">URL Backsound Kustom</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="url" id="customBsUrl" class="input-field"
+            style="margin-bottom:0;flex:1;font-size:12px;height:40px;padding:0 12px"
+            placeholder="https://... (link file audio MP3)">
+          <button class="pl-btn primary" id="applyBsUrlBtn" style="flex-shrink:0;height:40px;white-space:nowrap">
+            Terapkan
+          </button>
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">Kosongkan dan terapkan untuk reset ke default</div>
+      </div>
     </div>
 
     <!-- SECTION: API Server -->
@@ -1637,6 +1751,21 @@
       </div>
     </div>
 
+    <!-- SECTION: Shortcut Keyboard -->
+    <div class="settings-section">
+      <div class="settings-section-label">Shortcut Keyboard (Desktop)</div>
+      <table class="shortcut-table">
+        <tr><td>Putar / Jeda</td><td><span class="kbd">Space</span> <span class="kbd">K</span></td></tr>
+        <tr><td>Maju 5 detik</td><td><span class="kbd">→</span> <span class="kbd">L</span></td></tr>
+        <tr><td>Mundur 5 detik</td><td><span class="kbd">←</span> <span class="kbd">J</span></td></tr>
+        <tr><td>Volume naik</td><td><span class="kbd">↑</span></td></tr>
+        <tr><td>Volume turun</td><td><span class="kbd">↓</span></td></tr>
+        <tr><td>Mute / Unmute</td><td><span class="kbd">M</span></td></tr>
+        <tr><td>Lagu berikutnya</td><td><span class="kbd">N</span></td></tr>
+        <tr><td>Lagu sebelumnya</td><td><span class="kbd">P</span> <span class="kbd">B</span></td></tr>
+      </table>
+    </div>
+
     <button class="btn-primary" onclick="document.getElementById('settingsOverlay').classList.remove('open')"
       style="background:var(--surface);border:1px solid var(--border);color:var(--text2)">Tutup</button>
   </div>
@@ -1653,6 +1782,14 @@
       <button class="sleep-option" onclick="setSleepTimer(30, this)">30 menit</button>
       <button class="sleep-option" onclick="setSleepTimer(45, this)">45 menit</button>
       <button class="sleep-option" onclick="setSleepTimer(60, this)">60 menit</button>
+    </div>
+    <!-- Durasi kustom -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+      <input type="number" id="customSleepInput" class="input-field"
+        style="margin-bottom:0;flex:1;height:44px;padding:0 14px"
+        placeholder="Menit kustom..." min="1" max="999">
+      <button class="sleep-option" style="flex-shrink:0;width:80px;font-size:13px"
+        onclick="setCustomSleepTimer()">Set</button>
     </div>
     <button class="btn-primary" id="cancelSleepBtn" style="display:none;margin-bottom:8px;background:rgba(255,154,158,0.12);border:1px solid var(--accent3);color:var(--accent3)" onclick="cancelSleepTimer()">
       <i class="fa-solid fa-xmark"></i> Batalkan Timer
@@ -1779,6 +1916,10 @@ let state = {
   currentSong: null,
   downloadPendingSong: null,
 };
+
+// Sort mode untuk halaman Favorit & Riwayat
+let favSortMode  = 'recent'; // 'recent' | 'alpha'
+let histSortMode = 'recent'; // 'recent' | 'alpha'
 
 // ============================================================
 // DB — metadata in localStorage, audio blobs in IndexedDB
@@ -1946,7 +2087,19 @@ async function doSearch() {
   saveRecentSearch(q);
   document.getElementById('recentSearches').style.display = 'none';
   const container = document.getElementById('searchResults');
-  container.innerHTML = `<div class="empty-state"><div class="spinner"></div><p>Mencari...</p></div>`;
+
+  // Skeleton loading — lebih informatif dari spinner biasa
+  const skeletonRow = () => `
+    <div class="skeleton-card">
+      <div class="skeleton-item skel-thumb"></div>
+      <div class="skel-info">
+        <div class="skeleton-item skel-title"></div>
+        <div class="skeleton-item skel-meta"></div>
+      </div>
+    </div>`;
+  container.innerHTML = `
+    <div class="section-header"><div class="section-title">Mencari...</div></div>
+    <div class="song-list">${Array(6).fill('').map(skeletonRow).join('')}</div>`;
   try {
     const res = await fetch(`${SEARCH_API}/search/youtube?q=${encodeURIComponent(q)}`);
     const data = await res.json();
@@ -2051,6 +2204,10 @@ function updatePlayBtns() {
   document.getElementById('npbPlayPause').innerHTML = `<i class="fa-solid ${icon}"></i>`;
   const dppBtn = document.getElementById('dppPlay');
   if (dppBtn) dppBtn.innerHTML = `<i class="fa-solid ${icon}"></i>`;
+
+  // Animasi vinyl/piringan hitam di player modal — berputar saat play, berhenti saat pause
+  const artWrap = document.querySelector('.pm-art-wrap');
+  if (artWrap) artWrap.classList.toggle('is-playing', state.playing);
 }
 
 function togglePlayPause() {
@@ -2173,6 +2330,7 @@ function updatePlayerModal(song) {
   document.getElementById('pmArtist').textContent = song.channel || song.artist || '';
   const artImg = document.getElementById('pmArt');
   const artPh = document.getElementById('pmArtPlaceholder');
+  const artWrap = document.querySelector('.pm-art-wrap');
   if (song.thumbnail) {
     artImg.src = song.thumbnail;
     artImg.style.display = '';
@@ -2181,6 +2339,8 @@ function updatePlayerModal(song) {
     artImg.style.display = 'none';
     artPh.style.display = '';
   }
+  // Aktifkan mode vinyl (art berputar) saat ada lagu
+  if (artWrap) artWrap.classList.add('has-song');
   document.getElementById('pmFavBtn').classList.toggle('active', isFav(song.url));
   // Update download button state
   const dlBtn = document.getElementById('pmDownloadBtn');
@@ -2463,11 +2623,13 @@ function toggleFav(song) {
 
 function renderFavorites() {
   const el = document.getElementById('favoritesList');
-  if (!db.favorites.length) {
+  let songs = [...db.favorites];
+  if (favSortMode === 'alpha') songs.sort((a,b) => a.title.localeCompare(b.title, 'id'));
+  if (!songs.length) {
     el.innerHTML = `<div class="empty-state"><i class="fa-solid fa-heart"></i><p>Belum ada favorit</p></div>`;
     return;
   }
-  el.innerHTML = db.favorites.map(s => songCardHTML(s)).join('');
+  el.innerHTML = songs.map(s => songCardHTML(s)).join('');
 }
 
 // ============================================================
@@ -2482,11 +2644,14 @@ function addToHistory(song) {
 
 function renderHistory() {
   const el = document.getElementById('historyList');
-  if (!db.history.length) {
+  let songs = [...db.history];
+  if (histSortMode === 'alpha') songs.sort((a,b) => a.title.localeCompare(b.title, 'id'));
+  // histSortMode 'recent' sudah urut terbaru-ke-lama secara default
+  if (!songs.length) {
     el.innerHTML = `<div class="empty-state"><i class="fa-solid fa-clock-rotate-left"></i><p>Riwayat kosong</p></div>`;
     return;
   }
-  el.innerHTML = db.history.map(s => songCardHTML(s)).join('');
+  el.innerHTML = songs.map(s => songCardHTML(s)).join('');
 }
 
 document.getElementById('clearHistoryBtn').addEventListener('click', () => {
@@ -2964,6 +3129,7 @@ function addSongToPlaylist(plId) {
 // ============================================================
 function renderDownloads() {
   const el = document.getElementById('downloadsList');
+  if (!el) return; // halaman unduhan dinonaktifkan — abaikan tanpa crash
   const dls = Object.values(db.downloads).sort((a,b) => b.downloadedAt - a.downloadedAt);
   if (!dls.length) {
     el.innerHTML = `<div class="empty-state"><i class="fa-solid fa-download"></i><p>Belum ada lagu terunduh</p></div>`;
@@ -3042,10 +3208,11 @@ document.querySelectorAll('.ds-nav-item').forEach(el => {
 // HELPER: Refresh visible song list
 // ============================================================
 function refreshCurrentPage() {
-  const activeTab = document.querySelector('.tab.active')?.dataset.tab;
+  // Pakai nav-item (mobile) atau tab (desktop) — mana yang aktif
+  const activeEl = document.querySelector('.nav-item.active') || document.querySelector('.tab.active');
+  const activeTab = activeEl?.dataset.tab;
   if (activeTab === 'favorites') renderFavorites();
   if (activeTab === 'history') renderHistory();
-
 }
 
 // Close overlays on backdrop click
@@ -3167,17 +3334,33 @@ function renderRecentSearches() {
   const el = document.getElementById('recentSearches');
   if (!rs.length) { el.style.display = 'none'; return; }
   el.style.display = 'flex';
+  // Gunakan data attribute + event delegation, BUKAN inline onclick string
+  // Ini mencegah bug saat query mengandung apostrop (don't, it's, dll)
   el.innerHTML = '<span class="recent-label">Pencarian Terakhir</span>' +
-    rs.map(q => {
-      const safe = q.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;');
-      return `<div class="recent-chip" onclick="useRecentSearch('${safe}')">
+    rs.map((q, idx) => {
+      const safe = q.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+      return `<div class="recent-chip" data-rs-idx="${idx}">
         <i class="fa-solid fa-clock-rotate-left" style="font-size:10px;opacity:0.6"></i>
-        ${safe}
-        <span class="del-chip" onclick="event.stopPropagation();deleteRecentSearch('${safe}')">
+        <span>${safe}</span>
+        <span class="del-chip" data-rs-del-idx="${idx}">
           <i class="fa-solid fa-xmark"></i>
         </span>
       </div>`;
     }).join('');
+
+  // Pasang event listener per chip (bukan inline onclick)
+  const _rs = [...rs];
+  el.querySelectorAll('.recent-chip').forEach((chip) => {
+    chip.addEventListener('click', (e) => {
+      const delBtn = e.target.closest('[data-rs-del-idx]');
+      if (delBtn) {
+        e.stopPropagation();
+        deleteRecentSearch(_rs[parseInt(delBtn.dataset.rsDelIdx)]);
+        return;
+      }
+      useRecentSearch(_rs[parseInt(chip.dataset.rsIdx)]);
+    });
+  });
 }
 function useRecentSearch(q) {
   document.getElementById('searchInput').value = q;
@@ -3238,6 +3421,17 @@ function setSleepTimer(minutes, btn) {
   document.getElementById('sleepTimerOverlay').classList.remove('open');
   showToast(`Timer tidur: ${minutes} menit 🌙`);
 }
+
+// Durasi kustom dari input
+function setCustomSleepTimer() {
+  const val = parseInt(document.getElementById('customSleepInput').value, 10);
+  if (!val || val < 1) { showToast('Masukkan durasi yang valid (minimal 1 menit)'); return; }
+  setSleepTimer(val, null);
+}
+
+document.getElementById('customSleepInput')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') setCustomSleepTimer();
+});
 
 function cancelSleepTimer() {
   clearSleepTimerInternal();
@@ -3408,6 +3602,83 @@ audio.addEventListener('ended', () => {
 // ---- Init: update UI dulu, lalu satu kali percobaan play ----
 updateBsUI();
 bsPlay();
+
+// ============================================================
+// CUSTOM BACKSOUND URL
+// ============================================================
+const _defaultBsUrl = document.getElementById('backsoundEl').src;
+
+(function initCustomBacksound() {
+  const saved = localStorage.getItem('moosick_bs_url');
+  if (saved) backsound.src = saved;
+  const inp = document.getElementById('customBsUrl');
+  if (inp && saved) inp.value = saved;
+})();
+
+document.getElementById('applyBsUrlBtn')?.addEventListener('click', () => {
+  const url = document.getElementById('customBsUrl').value.trim();
+  if (!url) {
+    // Kosong → reset ke default
+    backsound.pause();
+    backsound.src = _defaultBsUrl;
+    localStorage.removeItem('moosick_bs_url');
+    if (bsEnabled && !state.playing) bsPlay();
+    showToast('Backsound direset ke default');
+    return;
+  }
+  try { new URL(url); } catch(e) { showToast('URL tidak valid'); return; }
+  backsound.pause();
+  backsound.src = url;
+  localStorage.setItem('moosick_bs_url', url);
+  if (bsEnabled && !state.playing) bsPlay();
+  showToast('Backsound diperbarui ✓');
+});
+
+// ============================================================
+// OFFLINE / ONLINE INDICATOR
+// ============================================================
+function updateOnlineStatus() {
+  let banner = document.getElementById('offlineBanner');
+  if (!navigator.onLine) {
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'offlineBanner';
+      banner.className = 'offline-banner';
+      banner.innerHTML = '<i class="fa-solid fa-wifi-slash"></i> Tidak ada koneksi internet — mode offline';
+      document.body.appendChild(banner);
+    }
+    showToast('⚠️ Koneksi terputus');
+  } else {
+    if (banner) {
+      banner.remove();
+      showToast('✓ Koneksi kembali');
+    }
+  }
+}
+window.addEventListener('online',  updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+// Cek status awal (tanpa toast supaya tidak berisik saat load)
+if (!navigator.onLine) {
+  const b = document.createElement('div');
+  b.id = 'offlineBanner';
+  b.className = 'offline-banner';
+  b.innerHTML = '<i class="fa-solid fa-wifi-slash"></i> Tidak ada koneksi internet — mode offline';
+  document.body.appendChild(b);
+}
+
+// ============================================================
+// SORT CHIPS — Favorit & Riwayat
+// ============================================================
+document.querySelectorAll('.sort-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    const page = chip.dataset.page;
+    const sort = chip.dataset.sort;
+    document.querySelectorAll(`.sort-chip[data-page="${page}"]`).forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    if (page === 'fav')  { favSortMode  = sort; renderFavorites(); }
+    if (page === 'hist') { histSortMode = sort; renderHistory(); }
+  });
+});
 
 </script>
 </body>
