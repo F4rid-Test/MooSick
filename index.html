@@ -136,33 +136,6 @@
   .icon-btn:active { transform: scale(0.93); }
   .icon-btn.active { background: rgba(126,232,162,0.15); border-color: var(--accent); color: var(--accent); }
 
-  /* ====== TABS ====== */
-  .tabs {
-    display: flex;
-    padding: 12px 20px 0;
-    gap: 4px;
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab {
-    padding: 7px 16px;
-    border-radius: 50px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text2);
-    cursor: pointer;
-    white-space: nowrap;
-    border: 1px solid transparent;
-    transition: all 0.2s;
-    background: transparent;
-  }
-  .tab.active {
-    background: var(--surface2);
-    border-color: var(--border2);
-    color: var(--text);
-  }
-
   /* ====== CONTENT PAGES ====== */
   .page { display: none; flex: 1; flex-direction: column; overflow-y: auto; padding-bottom: 160px; }
   .page.active { display: flex; }
@@ -1392,6 +1365,49 @@
 </style>
 </head>
 <body>
+
+<!-- ====== LOADING SCREEN ====== -->
+<div id="loadingScreen" style="
+  position:fixed;inset:0;z-index:9999;
+  background:#0d0f14;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;
+  transition:opacity 0.5s ease, visibility 0.5s ease;
+">
+  <div style="position:relative;display:flex;align-items:center;justify-content:center;">
+    <!-- Rotating ring -->
+    <svg width="96" height="96" viewBox="0 0 96 96" style="position:absolute;animation:lsRing 1.4s linear infinite">
+      <circle cx="48" cy="48" r="44" fill="none" stroke="rgba(126,232,162,0.15)" stroke-width="3"/>
+      <circle cx="48" cy="48" r="44" fill="none" stroke="url(#lsGrad)" stroke-width="3"
+        stroke-dasharray="80 196" stroke-linecap="round"/>
+      <defs>
+        <linearGradient id="lsGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#7ee8a2"/>
+          <stop offset="100%" stop-color="#56cfe1"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <!-- Logo icon -->
+    <div style="
+      width:56px;height:56px;border-radius:16px;
+      background:linear-gradient(135deg,#7ee8a2,#56cfe1);
+      display:flex;align-items:center;justify-content:center;
+      font-size:26px;color:#0d0f14;
+    ">
+      <i class="fa-solid fa-cow"></i>
+    </div>
+  </div>
+  <div style="font-family:'Syne',sans-serif;font-weight:800;font-size:26px;letter-spacing:-0.5px;color:#f0f2f5">
+    Moo<span style="color:#7ee8a2">Sick</span>
+  </div>
+  <div style="font-size:13px;color:rgba(240,242,245,0.4);letter-spacing:2px;text-transform:uppercase;animation:lsFade 1.8s ease-in-out infinite">
+    Memuat...
+  </div>
+</div>
+<style>
+@keyframes lsRing { to { transform:rotate(360deg); } }
+@keyframes lsFade { 0%,100%{opacity:0.4} 50%{opacity:1} }
+</style>
+
 <div class="desktop-shell">
 
 <!-- DESKTOP SIDEBAR -->
@@ -1569,6 +1585,8 @@
       <button class="pm-extra-btn" id="pmLyricsBtn"><i class="fa-solid fa-microphone-lines"></i> Lirik</button>
       <button class="pm-extra-btn" id="pmQueueBtn"><i class="fa-solid fa-list-ul"></i> Antrian</button>
       <button class="pm-extra-btn" id="pmSleepBtn" title="Timer Tidur"><i class="fa-solid fa-moon"></i> Tidur</button>
+      <button class="pm-extra-btn" id="pmShareBtn"><i class="fa-solid fa-share-nodes"></i> Bagikan</button>
+      <button class="pm-extra-btn" id="pmSpeedBtn"><i class="fa-solid fa-gauge-high"></i> <span id="pmSpeedLabel">1×</span></button>
     </div>
 
     <!-- Queue panel -->
@@ -1659,6 +1677,21 @@
     <div class="sheet-title">Buat Playlist Baru</div>
     <input class="input-field" id="playlistNameInput" placeholder="Nama playlist...">
     <button class="btn-primary" id="createPlaylistConfirm">Buat</button>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL (replaces browser confirm()) -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-title" id="confirmModalTitle">Konfirmasi</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:20px" id="confirmModalDesc"></p>
+    <div style="display:flex;gap:8px">
+      <button class="btn-primary" id="confirmModalCancel"
+        style="background:var(--surface);border:1px solid var(--border);color:var(--text2)">Batal</button>
+      <button class="btn-primary" id="confirmModalOk"
+        style="background:rgba(255,100,100,0.15);border:1px solid var(--accent3);color:var(--accent3)">Hapus</button>
+    </div>
   </div>
 </div>
 
@@ -1853,6 +1886,23 @@
 
 <script>
 // ============================================================
+// LOADING SCREEN DISMISS
+// ============================================================
+(function() {
+  function hideLoader() {
+    const ls = document.getElementById('loadingScreen');
+    if (!ls) return;
+    ls.style.opacity = '0';
+    ls.style.visibility = 'hidden';
+    setTimeout(() => ls.remove(), 520);
+  }
+  // Hide after fonts + DOM ready, min 1.2s for feel
+  const minWait = new Promise(r => setTimeout(r, 1200));
+  const fontWait = document.fonts ? document.fonts.ready : Promise.resolve();
+  Promise.all([minWait, fontWait]).then(hideLoader);
+})();
+
+// ============================================================
 // API CONFIGURATION
 // ============================================================
 const APIS = {
@@ -1932,6 +1982,15 @@ function loadDB() {
 }
 function saveDB() {
   try { localStorage.setItem('moosick_meta', JSON.stringify(db)); } catch(e) {}
+  // Check storage quota periodically (only when downloads exist)
+  if (Object.keys(db.downloads).length > 0 && navigator.storage?.estimate) {
+    navigator.storage.estimate().then(({usage, quota}) => {
+      const pct = usage / quota;
+      if (pct > 0.85) {
+        showToast('⚠️ Penyimpanan hampir penuh — hapus beberapa unduhan');
+      }
+    }).catch(() => {});
+  }
 }
 let db = loadDB();
 
@@ -2016,6 +2075,24 @@ function showToast(msg) {
   t._timer = setTimeout(() => t.classList.remove('show'), 2200);
 }
 
+// Custom confirm modal (replaces window.confirm which can be blocked on iOS)
+let _confirmCallback = null;
+function showConfirmModal(title, desc, onConfirm, confirmLabel) {
+  document.getElementById('confirmModalTitle').textContent = title;
+  document.getElementById('confirmModalDesc').textContent = desc || '';
+  document.getElementById('confirmModalOk').textContent = confirmLabel || 'Hapus';
+  _confirmCallback = onConfirm;
+  document.getElementById('confirmModal').classList.add('open');
+}
+document.getElementById('confirmModalOk').addEventListener('click', () => {
+  document.getElementById('confirmModal').classList.remove('open');
+  if (_confirmCallback) { _confirmCallback(); _confirmCallback = null; }
+});
+document.getElementById('confirmModalCancel').addEventListener('click', () => {
+  document.getElementById('confirmModal').classList.remove('open');
+  _confirmCallback = null;
+});
+
 function fmtTime(s) {
   if (!s || isNaN(s)) return '0:00';
   const m = Math.floor(s / 60);
@@ -2031,8 +2108,9 @@ function songCardHTML(song, opts = {}) {
   const fav = isFav(song.url);
   const dl = isDownloaded(song.url);
   const isPlaying = state.currentSong && state.currentSong.url === song.url;
+  const safeData = encodeURIComponent(JSON.stringify(song));
   return `
-    <div class="song-card ${isPlaying ? 'playing' : ''}" data-url="${song.url}" onclick="playSong(${JSON.stringify(song).replace(/"/g,'&quot;')})">
+    <div class="song-card ${isPlaying ? 'playing' : ''}" data-url="${song.url}" data-song="${safeData}">
       ${song.thumbnail
         ? `<img class="song-thumb" src="${song.thumbnail}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
         : ''}
@@ -2046,10 +2124,10 @@ function songCardHTML(song, opts = {}) {
       ${dl ? `<div class="dl-badge" title="${isCached(song.url) ? 'Tersimpan offline' : 'Terunduh'}"><i class="fa-solid ${isCached(song.url) ? 'fa-circle-check' : 'fa-download'}"></i></div>` : ''}
       <div class="song-duration">${song.duration || ''}</div>
       <div class="song-actions">
-        <button class="song-action-btn ${fav ? 'fav-active' : ''}" onclick="event.stopPropagation();toggleFav(${JSON.stringify(song).replace(/"/g,'&quot;')})" title="Favorit">
+        <button class="song-action-btn ${fav ? 'fav-active' : ''}" data-fav-song="${safeData}" title="Favorit">
           <i class="fa-solid fa-heart"></i>
         </button>
-        <button class="song-action-btn" onclick="event.stopPropagation();openAddToPlaylist(${JSON.stringify(song).replace(/"/g,'&quot;')})" title="Tambah ke Playlist">
+        <button class="song-action-btn" data-addpl-song="${safeData}" title="Tambah ke Playlist">
           <i class="fa-solid fa-folder-plus"></i>
         </button>
       </div>
@@ -2057,10 +2135,37 @@ function songCardHTML(song, opts = {}) {
 }
 
 // ============================================================
+// EVENT DELEGATION FOR SONG CARDS (XSS-safe replacement for inline onclick)
+// ============================================================
+document.addEventListener('click', function(e) {
+  // Play song card
+  const card = e.target.closest('.song-card');
+  if (card && !e.target.closest('[data-fav-song]') && !e.target.closest('[data-addpl-song]')) {
+    if (card.dataset.song) {
+      try { playSong(JSON.parse(decodeURIComponent(card.dataset.song))); } catch(_) {}
+    }
+    return;
+  }
+  // Fav button
+  const favBtn = e.target.closest('[data-fav-song]');
+  if (favBtn) {
+    e.stopPropagation();
+    try { toggleFav(JSON.parse(decodeURIComponent(favBtn.dataset.favSong))); } catch(_) {}
+    return;
+  }
+  // Add to playlist button
+  const plBtn = e.target.closest('[data-addpl-song]');
+  if (plBtn) {
+    e.stopPropagation();
+    try { openAddToPlaylist(JSON.parse(decodeURIComponent(plBtn.dataset.addplSong))); } catch(_) {}
+    return;
+  }
+});
+
+// ============================================================
 // TABS / NAV
 // ============================================================
 function switchTab(tab) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.tab === tab));
   document.querySelectorAll('.ds-nav-item').forEach(n => n.classList.toggle('active', n.dataset.tab === tab));
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -2068,10 +2173,9 @@ function switchTab(tab) {
   if (tab === 'favorites') renderFavorites();
   if (tab === 'history') renderHistory();
   if (tab === 'playlists') renderPlaylists();
-  if (tab === 'downloads') renderDownloads();
 }
 
-document.querySelectorAll('.tab, .nav-item').forEach(el => {
+document.querySelectorAll('.nav-item').forEach(el => {
   el.addEventListener('click', () => switchTab(el.dataset.tab));
 });
 
@@ -2104,7 +2208,23 @@ async function doSearch() {
     const res = await fetch(`${SEARCH_API}/search/youtube?q=${encodeURIComponent(q)}`);
     const data = await res.json();
     if (!data.success || !data.results?.length) {
-      container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-magnifying-glass"></i><p>Tidak ada hasil</p></div>`;
+      // Auto-retry with API 2 if API 1 returns empty
+      let songs = [];
+      if (currentApiNum !== 2) {
+        try {
+          const res2 = await fetch(`https://api-xemoz-official.my.id/api/search/youtube?q=${encodeURIComponent(q)}`);
+          const data2 = await res2.json();
+          if (data2.success && data2.results?.length) {
+            songs = data2.results.map(r => ({ title:r.title, channel:r.channel, duration:r.duration, thumbnail:r.thumbnail, url:r.url, views:r.views }));
+          }
+        } catch(_) {}
+      }
+      if (!songs.length) {
+        container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-magnifying-glass"></i><p>Tidak ada hasil</p></div>`;
+        return;
+      }
+      state.queue = songs;
+      container.innerHTML = `<div class="section-header"><div class="section-title">Hasil Pencarian</div></div><div class="song-list">${songs.map(s => songCardHTML(s)).join('')}</div>`;
       return;
     }
     const songs = data.results.map(r => ({
@@ -2120,6 +2240,17 @@ async function doSearch() {
       <div class="section-header"><div class="section-title">Hasil Pencarian</div></div>
       <div class="song-list">${songs.map(s => songCardHTML(s)).join('')}</div>`;
   } catch(e) {
+    // Network error: try API 2 as fallback
+    try {
+      const res2 = await fetch(`https://api-xemoz-official.my.id/api/search/youtube?q=${encodeURIComponent(q)}`);
+      const data2 = await res2.json();
+      if (data2.success && data2.results?.length) {
+        const songs = data2.results.map(r => ({ title:r.title, channel:r.channel, duration:r.duration, thumbnail:r.thumbnail, url:r.url, views:r.views }));
+        state.queue = songs;
+        container.innerHTML = `<div class="section-header"><div class="section-title">Hasil Pencarian <span style="font-size:11px;color:var(--text3)">(via API 2)</span></div></div><div class="song-list">${songs.map(s => songCardHTML(s)).join('')}</div>`;
+        return;
+      }
+    } catch(_) {}
     container.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i><p>Gagal mencari. Cek koneksi internet.</p></div>`;
   }
 }
@@ -2210,11 +2341,32 @@ function updatePlayBtns() {
   if (artWrap) artWrap.classList.toggle('is-playing', state.playing);
 }
 
+let _playPauseInFlight = false;
 function togglePlayPause() {
   if (!state.currentSong) return;
-  if (state.playing) { audio.pause(); state.playing = false; }
-  else { safePlay(); state.playing = true; }
-  updatePlayBtns();
+  if (_playPauseInFlight) return;
+  if (state.playing) {
+    audio.pause();
+    state.playing = false;
+    updatePlayBtns();
+  } else {
+    _playPauseInFlight = true;
+    const p = audio.play();
+    if (p !== undefined) {
+      p.then(() => {
+        state.playing = true;
+        updatePlayBtns();
+      }).catch(err => {
+        if (err.name !== 'AbortError') {
+          showToast('Gagal memutar. Cek koneksi atau ganti API server.');
+        }
+      }).finally(() => { _playPauseInFlight = false; });
+    } else {
+      state.playing = true;
+      updatePlayBtns();
+      _playPauseInFlight = false;
+    }
+  }
 }
 
 function playNext() {
@@ -2319,11 +2471,25 @@ document.getElementById('npbNext').addEventListener('click', e => { e.stopPropag
 // PLAYER MODAL
 // ============================================================
 function openPlayerModal() {
-  document.getElementById('playerModal').classList.add('open');
+  const modal = document.getElementById('playerModal');
+  modal.classList.add('open');
+  // Focus the close button for accessibility
+  setTimeout(() => {
+    const closeBtn = document.getElementById('pmClose');
+    if (closeBtn) closeBtn.focus();
+  }, 420); // after animation
 }
 function closePlayerModal() {
   document.getElementById('playerModal').classList.remove('open');
-}document.getElementById('pmClose').addEventListener('click', closePlayerModal);
+}
+
+// Close modals on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const modal = document.getElementById('playerModal');
+    if (modal.classList.contains('open')) { closePlayerModal(); return; }
+  }
+});document.getElementById('pmClose').addEventListener('click', closePlayerModal);
 
 function updatePlayerModal(song) {
   document.getElementById('pmSongTitle').textContent = song.title;
@@ -2338,6 +2504,7 @@ function updatePlayerModal(song) {
   } else {
     artImg.style.display = 'none';
     artPh.style.display = '';
+    resetAlbumColor();
   }
   // Aktifkan mode vinyl (art berputar) saat ada lagu
   if (artWrap) artWrap.classList.add('has-song');
@@ -2361,6 +2528,40 @@ function updatePlayerModal(song) {
   state.showLyrics = false;
   document.getElementById('pmLyricsBtn').innerHTML = '<i class="fa-solid fa-microphone-lines"></i> Lirik';
 }
+
+// ============================================================
+// DYNAMIC ALBUM ART COLOR (extracts dominant color from thumbnail)
+// ============================================================
+function extractDominantColor(imgEl, callback) {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 4; canvas.height = 4;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(imgEl, 0, 0, 4, 4);
+    const d = ctx.getImageData(0, 0, 4, 4).data;
+    let r=0, g=0, b=0, count=0;
+    for (let i=0; i<d.length; i+=4) {
+      r+=d[i]; g+=d[i+1]; b+=d[i+2]; count++;
+    }
+    r=Math.round(r/count); g=Math.round(g/count); b=Math.round(b/count);
+    callback(r, g, b);
+  } catch(e) { /* cross-origin canvas blocked — skip */ }
+}
+
+function applyAlbumColor(r, g, b) {
+  const brightness = (r*299 + g*587 + b*114) / 1000;
+  const factor = brightness > 60 ? 0.7 : 1.2;
+  const accent = `rgb(${Math.min(255,Math.round(r*factor))},${Math.min(255,Math.round(g*factor))},${Math.min(255,Math.round(b*factor))})`;
+  document.getElementById('playerModal').style.setProperty('--accent', accent);
+}
+
+function resetAlbumColor() {
+  document.getElementById('playerModal').style.removeProperty('--accent');
+}
+
+document.getElementById('pmArt').addEventListener('load', function() {
+  extractDominantColor(this, applyAlbumColor);
+});
 
 document.getElementById('pmPlayPause').addEventListener('click', togglePlayPause);
 document.getElementById('pmPrev').addEventListener('click', playPrev);
@@ -2599,8 +2800,6 @@ async function downloadSong(song) {
   }
 }
 
-// extractYtId removed (unused dead code)
-
 // ============================================================
 // FAVORITES
 // ============================================================
@@ -2808,12 +3007,17 @@ document.getElementById('renamePlNameInput').addEventListener('keydown', e => {
 document.getElementById('plDetailDelete').addEventListener('click', () => {
   if (!currentPlId) return;
   const pl = db.playlists[currentPlId];
-  if (!confirm(`Hapus playlist "${pl.name}"?`)) return;
-  delete db.playlists[currentPlId];
-  saveDB();
-  closePlDetail();
-  renderPlaylists();
-  showToast('Playlist dihapus');
+  showConfirmModal(
+    `Hapus playlist "${pl.name}"?`,
+    'Tindakan ini tidak bisa dibatalkan.',
+    () => {
+      delete db.playlists[currentPlId];
+      saveDB();
+      closePlDetail();
+      renderPlaylists();
+      showToast('Playlist dihapus');
+    }
+  );
 });
 
 document.getElementById('plDetailDownloadAll').addEventListener('click', () => {
@@ -3135,8 +3339,10 @@ function renderDownloads() {
     el.innerHTML = `<div class="empty-state"><i class="fa-solid fa-download"></i><p>Belum ada lagu terunduh</p></div>`;
     return;
   }
-  el.innerHTML = dls.map(s => `
-    <div class="song-card" onclick="playSong(${JSON.stringify(s).replace(/"/g,'&quot;')})">
+  el.innerHTML = dls.map(s => {
+    const safeData = encodeURIComponent(JSON.stringify(s));
+    return `
+    <div class="song-card" data-song="${safeData}">
       ${s.thumbnail
         ? `<img class="song-thumb" src="${s.thumbnail}" alt="" loading="lazy">`
         : `<div class="thumb-placeholder"><i class="fa-solid fa-music"></i></div>`}
@@ -3149,11 +3355,20 @@ function renderDownloads() {
       </div>
       <div class="song-duration">${s.duration || ''}</div>
       <div class="song-actions">
-        <button class="song-action-btn" onclick="event.stopPropagation();deleteDownload('${encodeURIComponent(s.url)}')" title="Hapus Unduhan">
+        <button class="song-action-btn" data-del-url="${encodeURIComponent(s.url)}" title="Hapus Unduhan">
           <i class="fa-solid fa-trash" style="color:var(--accent3)"></i>
         </button>
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+
+  // Event delegation for delete buttons
+  el.querySelectorAll('[data-del-url]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      deleteDownload(btn.dataset.delUrl);
+    });
+  });
 }
 
 async function deleteDownload(encodedUrl) {
@@ -3454,6 +3669,41 @@ document.getElementById('pmSleepBtn').addEventListener('click', () => {
 });
 
 // ============================================================
+// SHARE SONG (Web Share API)
+// ============================================================
+document.getElementById('pmShareBtn').addEventListener('click', () => {
+  if (!state.currentSong) return;
+  const song = state.currentSong;
+  if (navigator.share) {
+    navigator.share({
+      title: song.title,
+      text: `${song.title}${song.channel ? ' — ' + song.channel : ''} | MooSick`,
+      url: window.location.href,
+    }).catch(() => {});
+  } else {
+    // Fallback: copy to clipboard
+    const text = `${song.title}${song.channel ? ' — ' + song.channel : ''} | MooSick`;
+    navigator.clipboard?.writeText(text).then(() => {
+      showToast('Info lagu disalin ke clipboard!');
+    }).catch(() => showToast('Fitur share tidak didukung browser ini'));
+  }
+});
+
+// ============================================================
+// PLAYBACK SPEED CONTROL
+// ============================================================
+const SPEEDS = [0.75, 1, 1.25, 1.5, 2];
+let speedIdx = 1; // default 1×
+document.getElementById('pmSpeedBtn').addEventListener('click', () => {
+  speedIdx = (speedIdx + 1) % SPEEDS.length;
+  const speed = SPEEDS[speedIdx];
+  audio.playbackRate = speed;
+  const label = speed === 1 ? '1×' : speed + '×';
+  document.getElementById('pmSpeedLabel').textContent = label;
+  showToast('Kecepatan: ' + label);
+});
+
+// ============================================================
 // QUEUE VIEW (Up Next)
 // ============================================================
 function renderQueuePanel() {
@@ -3522,14 +3772,13 @@ document.getElementById('pmQueueBtn').addEventListener('click', () => {
 });
 
 // Close queue panel when lyrics open (to avoid stacking)
-const _origLyricsClick = document.getElementById('pmLyricsBtn').onclick;
 document.getElementById('pmLyricsBtn').addEventListener('click', () => {
   const qPanel = document.getElementById('queuePanel');
   if (qPanel.style.display !== 'none') {
     qPanel.style.display = 'none';
     document.getElementById('pmQueueBtn').innerHTML = '<i class="fa-solid fa-list-ul"></i> Antrian';
   }
-});
+}, true); // capture phase so it fires before the main lyrics listener
 
 
 // ============================================================
@@ -3658,13 +3907,16 @@ function updateOnlineStatus() {
 window.addEventListener('online',  updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
 // Cek status awal (tanpa toast supaya tidak berisik saat load)
-if (!navigator.onLine) {
-  const b = document.createElement('div');
-  b.id = 'offlineBanner';
-  b.className = 'offline-banner';
-  b.innerHTML = '<i class="fa-solid fa-wifi-slash"></i> Tidak ada koneksi internet — mode offline';
-  document.body.appendChild(b);
-}
+updateOnlineStatus._silent = true;
+(function checkInitialOnline() {
+  if (!navigator.onLine) {
+    const b = document.createElement('div');
+    b.id = 'offlineBanner';
+    b.className = 'offline-banner';
+    b.innerHTML = '<i class="fa-solid fa-wifi-slash"></i> Tidak ada koneksi internet — mode offline';
+    document.body.appendChild(b);
+  }
+})();
 
 // ============================================================
 // SORT CHIPS — Favorit & Riwayat
